@@ -26,6 +26,7 @@ final class ManorAudio {
 
     private var buffers: [String: AVAudioPCMBuffer] = [:]
     private var running = false
+    private var paused = false
     private var configObserver: NSObjectProtocol?
     private var stepVariant = 0
 
@@ -82,10 +83,12 @@ final class ManorAudio {
         reverb.loadFactoryReverbPreset(.mediumHall)
         reverb.level = -4
 
+        // iOS stops the engine when the audio route changes (headphones in or out, AirPods connecting) or another
+        // app takes the sound. Start it again, the same way as at the beginning.
         configObserver = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
         ) { [weak self] _ in
-            guard let self, self.running else { return }
+            guard let self, self.running, !self.paused else { return }
             self.running = false
             self.start()
         }
@@ -100,33 +103,54 @@ final class ManorAudio {
         let session = AVAudioSession.sharedInstance()
         try? session.setCategory(.playback, mode: .default, options: [])
         try? session.setActive(true)
+        // Clear anything left from before a restart, so the rain and the clock don't pile up.
+        for node in spatial + flat + [ambience] { node.stop() }
         engine.prepare()
         do { try engine.start() } catch { return }
         running = true
+        paused = false
         for node in spatial + flat + [ambience] { node.play() }
-        if let rain = buffer("amb_rain", "wav") { ambience.scheduleBuffer(rain, at: nil, options: .loops) }
+        if let rain = buffer("amb_rain", "wav") { schedule(rain, on: ambience, options: .loops) }
         if let tick = buffer("clock", "wav") {
             clock.position = point(Mansion.groundFloor.feature(id: "clock")?.cell ?? Cell(12, 6))
             clock.volume = 0.6
-            clock.scheduleBuffer(tick, at: nil, options: .loops)
+            schedule(tick, on: clock, options: .loops)
         }
     }
 
     func pause() {
+        paused = true
         engine.pause()
-        running = false
     }
 
     func resume() {
-        guard !running else { return }
-        do { try engine.start() } catch { return }
-        running = true
+        guard paused else { return }
+        paused = false
+        if !engine.isRunning {
+            do { try engine.start() } catch {
+                // The engine was reset while paused; build it up again.
+                running = false
+                start()
+            }
+        }
     }
 
     func stop() {
         for node in spatial + flat + [ambience] { node.stop() }
         engine.stop()
         running = false
+        paused = false
+    }
+
+    /// Plays a buffer on a player, unless that would crash: the engine has to be running and the buffer's
+    /// channels have to match the player's. Without this, AVAudioEngine stops the whole app.
+    private func schedule(_ buffer: AVAudioPCMBuffer, on node: AVAudioPlayerNode,
+                          options: AVAudioPlayerNodeBufferOptions = .interrupts) {
+        guard engine.isRunning, node.engine != nil else { return }
+        guard buffer.format.channelCount == node.outputFormat(forBus: 0).channelCount,
+              buffer.format.sampleRate == node.outputFormat(forBus: 0).sampleRate else { return }
+        if !node.isPlaying { node.play() }
+        node.scheduleBuffer(buffer, at: nil, options: options)
     }
 
     // MARK: Listener
@@ -177,7 +201,7 @@ final class ManorAudio {
         stepVariant = (stepVariant + 1) % 3
         guard let b = buffer("step_\(surface.rawValue)_\(stepVariant + 1)", "wav") else { return }
         playerSteps.volume = loudness(surface) * (running ? 1 : 0.65)
-        playerSteps.scheduleBuffer(b, at: nil, options: .interrupts)
+        schedule(b, on: playerSteps)
     }
 
     func hunterStep(_ surface: Surface, at cell: Cell, running: Bool) {
@@ -185,24 +209,24 @@ final class ManorAudio {
         hunterSteps.position = point(cell)
         hunterVoice.position = point(cell, height: 0.6)
         hunterSteps.volume = min(1, loudness(surface) + 0.15) * (running ? 1 : 0.85)
-        hunterSteps.scheduleBuffer(b, at: nil, options: .interrupts)
+        schedule(b, on: hunterSteps)
     }
 
     func creak() {
         guard let b = buffer("creak_\(Int.random(in: 1...3))", "wav") else { return }
-        creaks.scheduleBuffer(b, at: nil, options: .interrupts)
+        schedule(b, on: creaks)
     }
 
     /// A one-shot effect that isn't in the house: searching, the key, hiding, the door, stings.
     func effect(_ name: String, volume: Float = 1) {
         guard let b = buffer(name, "wav") else { return }
         effects.volume = volume
-        effects.scheduleBuffer(b, at: nil, options: .interrupts)
+        schedule(b, on: effects)
     }
 
     func stopEffects() {
         effects.stop()
-        effects.play()
+        if engine.isRunning { effects.play() }
     }
 
     /// Rain and thunder volume, 0 to 1 (the player's setting). The clock isn't affected: it helps you find your way.
@@ -218,13 +242,13 @@ final class ManorAudio {
         guard let b = buffer("thunder_\(Int.random(in: 1...2))", "wav") else { return }
         guard weatherLevel > 0 else { return }
         thunderNode.volume = Float.random(in: 0.35...0.8) * min(1, weatherLevel * 1.5)
-        thunderNode.scheduleBuffer(b, at: nil, options: .interrupts)
+        schedule(b, on: thunderNode)
     }
 
     func heartbeat(volume: Float) {
         guard let b = buffer("heartbeat", "wav") else { return }
         heart.volume = volume
-        heart.scheduleBuffer(b, at: nil, options: .interrupts)
+        schedule(b, on: heart)
     }
 
     /// Plays a recorded line and returns how long it is, in seconds.
@@ -239,13 +263,13 @@ final class ManorAudio {
         case .host: node = hostVoice
         case .friend: node = narration
         }
-        node.scheduleBuffer(b, at: nil, options: .interrupts)
+        schedule(b, on: node)
         return Double(b.frameLength) / b.format.sampleRate
     }
 
     func stopNarration() {
         narration.stop()
-        narration.play()
+        if engine.isRunning { narration.play() }
     }
 
     func duration(of line: VoiceLine) -> Double {
