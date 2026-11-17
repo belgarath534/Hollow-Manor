@@ -29,7 +29,16 @@ def apple(method, path, body = nil)
     request["Content-Type"] = "application/json"
     request.body = body.to_json
   end
-  Net::HTTP.start(uri.host, 443, use_ssl: true) { |http| http.request(request) }
+  response = nil
+  # Apple sometimes answers 500 for a while; try again before giving up.
+  4.times do |attempt|
+    request["Authorization"] = "Bearer #{token}"
+    response = Net::HTTP.start(uri.host, 443, use_ssl: true, read_timeout: 30) { |http| http.request(request) }
+    return response unless response.code.start_with?("5")
+    puts "   Apple had a problem (HTTP #{response.code}), trying again (#{attempt + 1} of 4)…"
+    sleep 10 * (attempt + 1)
+  end
+  response
 end
 
 found = apple(:get, "/v1/bundleIds?filter[identifier]=#{BUNDLE_ID}&limit=5")
