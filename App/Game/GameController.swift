@@ -27,6 +27,9 @@ final class GameController: NSObject, ObservableObject {
     private var nextHeartbeat: CFTimeInterval = 0
     private var introWork: [DispatchWorkItem] = []
     private var started = false
+    private var stopped = false
+    private var nextThunder: CFTimeInterval = 0
+    private let music = MusicPlayer.shared
 
     init(settings: AppSettings) {
         self.settings = settings
@@ -35,6 +38,7 @@ final class GameController: NSObject, ObservableObject {
         announcer.output = settings.speechOutput
         haptics.enabled = settings.haptics
         announcer.onCaption = { [weak self] text in self?.showCaption(text) }
+        announcer.onSpeakingChanged = { speaking in MusicPlayer.shared.duck(speaking) }
         hardware.onCommand = { [weak self] in self?.handle($0) }
     }
 
@@ -50,10 +54,14 @@ final class GameController: NSObject, ObservableObject {
         let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
         link.add(to: .main, forMode: .common)
         displayLink = link
+        music.stop(fade: 2)
         playIntro()
     }
 
     func stop() {
+        guard !stopped else { return }
+        stopped = true
+        if case .ended = phase {} else { music.stop() }
         introWork.forEach { $0.cancel() }
         displayLink?.invalidate()
         displayLink = nil
@@ -69,12 +77,14 @@ final class GameController: NSObject, ObservableObject {
         phase = .paused
         touchInput = MoveInput()
         audio.pause()
+        music.pause()
         announcer.speak("Paused", priority: .high)
     }
 
     func resume() {
         guard phase == .paused else { return }
         audio.resume()
+        music.resume()
         lastTimestamp = 0
         phase = .playing
         announcer.speak("Back in the house.", priority: .high)
@@ -117,6 +127,8 @@ final class GameController: NSObject, ObservableObject {
         audio.stopNarration()
         phase = .playing
         lastTimestamp = 0
+        music.play(.explore, fade: 4)
+        nextThunder = CACurrentMediaTime() + Double.random(in: 15...30)
         if announce {
             announcer.speak(
                 "You're in the foyer. The front door is locked behind you. Find the key and get out. "
@@ -143,6 +155,10 @@ final class GameController: NSObject, ObservableObject {
         audio.setListener(at: game.player.cell, facing: game.player.facing)
         audio.setHunterOcclusion(hunterOcclusion())
         updateHeartbeat(now: now)
+        if now >= nextThunder {
+            audio.thunder()
+            nextThunder = now + Double.random(in: 35...80)
+        }
         view?.setNeedsDisplay()
     }
 
@@ -217,11 +233,19 @@ final class GameController: NSObject, ObservableObject {
                 audio.setHiding(false)
                 audio.effect("door_open")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in self?.audio.effect("escaped") }
+                music.stop(fade: 0.5)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                    if self?.stopped == false { self?.music.play(.escaped, fade: 1) }
+                }
                 end(.escaped)
             case .caught:
                 audio.setHiding(false)
                 audio.effect("caught")
                 haptics.caught()
+                music.stop(fade: 0.3)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
+                    if self?.stopped == false { self?.music.play(.caught, fade: 2) }
+                }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
                     self?.playVoice(.hostCaught, from: nil)
                 }
@@ -229,7 +253,16 @@ final class GameController: NSObject, ObservableObject {
             case let .voice(line, from):
                 playVoice(line, from: from)
             case let .hunterStateChanged(mode):
-                if mode == .chase { haptics.spotted() }
+                if mode == .chase {
+                    haptics.spotted()
+                    music.play(.chase, fade: 0.4)
+                } else if music.current == .chase {
+                    // Back to sneaking music once he's lost you.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                        guard let self, self.phase == .playing, self.game.hunter.mode != .chase else { return }
+                        self.music.play(.explore, fade: 4)
+                    }
+                }
             case .turned, .enteredRoom, .enteredDoorway, .arrivedAt, .alreadySearched, .cantHideNow:
                 break
             }

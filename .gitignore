@@ -9,3 +9,4 @@ xcuserdata/
 __pycache__/
 tools/voices/.venv
 tools/voices/models
+tools/sfx/.cache

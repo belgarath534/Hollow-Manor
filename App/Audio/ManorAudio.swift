@@ -21,6 +21,7 @@ final class ManorAudio {
     private let narration = AVAudioPlayerNode()
     private let effects = AVAudioPlayerNode()
     private let heart = AVAudioPlayerNode()
+    private let thunderNode = AVAudioPlayerNode()
     private let ambience = AVAudioPlayerNode()
 
     private var buffers: [String: AVAudioPCMBuffer] = [:]
@@ -32,7 +33,7 @@ final class ManorAudio {
     private let hostPosition = AVAudio3DPoint(x: 12, y: 5, z: 6.5)
 
     private var spatial: [AVAudioPlayerNode] { [playerSteps, creaks, hunterSteps, hunterVoice, hostVoice, clock] }
-    private var flat: [AVAudioPlayerNode] { [narration, effects, heart] }
+    private var flat: [AVAudioPlayerNode] { [narration, effects, heart, thunderNode] }
 
     init() {
         engine.attach(environment)
@@ -160,10 +161,22 @@ final class ManorAudio {
 
     // MARK: Sounds
 
+    /// How loud a floor is underfoot. Matches how far the Hunter can hear it, so you learn which floors are risky.
+    private func loudness(_ surface: Surface) -> Float {
+        switch surface {
+        case .carpet: return 0.45
+        case .stone: return 0.65
+        case .wood: return 0.8
+        case .tile: return 0.85
+        case .creakyWood: return 0.9
+        case .marble: return 1
+        }
+    }
+
     func playerStep(_ surface: Surface, running: Bool) {
         stepVariant = (stepVariant + 1) % 3
         guard let b = buffer("step_\(surface.rawValue)_\(stepVariant + 1)", "wav") else { return }
-        playerSteps.volume = running ? 1 : 0.6
+        playerSteps.volume = loudness(surface) * (running ? 1 : 0.65)
         playerSteps.scheduleBuffer(b, at: nil, options: .interrupts)
     }
 
@@ -171,7 +184,7 @@ final class ManorAudio {
         guard let b = buffer("boot_\(surface.rawValue)_\(Int.random(in: 1...3))", "wav") else { return }
         hunterSteps.position = point(cell)
         hunterVoice.position = point(cell, height: 0.6)
-        hunterSteps.volume = running ? 1 : 0.85
+        hunterSteps.volume = min(1, loudness(surface) + 0.15) * (running ? 1 : 0.85)
         hunterSteps.scheduleBuffer(b, at: nil, options: .interrupts)
     }
 
@@ -190,6 +203,13 @@ final class ManorAudio {
     func stopEffects() {
         effects.stop()
         effects.play()
+    }
+
+    /// Distant thunder, outside.
+    func thunder() {
+        guard let b = buffer("thunder_\(Int.random(in: 1...2))", "wav") else { return }
+        thunderNode.volume = Float.random(in: 0.35...0.8)
+        thunderNode.scheduleBuffer(b, at: nil, options: .interrupts)
     }
 
     func heartbeat(volume: Float) {

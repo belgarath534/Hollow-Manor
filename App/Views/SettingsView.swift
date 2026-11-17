@@ -32,6 +32,20 @@ struct SettingsView: View {
             }
 
             Section {
+                VStack(alignment: .leading) {
+                    Text("Music volume")
+                    Slider(value: $settings.musicVolume, in: 0...1, step: 0.1) {
+                        Text("Music volume")
+                    }
+                    .accessibilityValue(settings.musicVolume == 0 ? "Off" : "\(Int(settings.musicVolume * 100)) percent")
+                }
+            } header: {
+                Text("Music")
+            } footer: {
+                Text("Music gets quieter while the game is speaking.")
+            }
+
+            Section {
                 Toggle("Vibration", isOn: $settings.haptics)
                 Toggle("Skip the intro", isOn: $settings.skipIntro)
             }

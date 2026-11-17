@@ -21,6 +21,13 @@ final class AppSettings: ObservableObject {
     @Published var skipIntro: Bool {
         didSet { defaults.set(skipIntro, forKey: "skipIntro") }
     }
+    /// 0 is off, 1 is full.
+    @Published var musicVolume: Double {
+        didSet {
+            defaults.set(musicVolume, forKey: "musicVolume")
+            MusicPlayer.shared.volume = Float(musicVolume)
+        }
+    }
     /// Say north, east, south or west after every turn.
     @Published var announceTurns: Bool {
         didSet { defaults.set(announceTurns, forKey: "announceTurns") }
@@ -33,6 +40,8 @@ final class AppSettings: ObservableObject {
         captions = defaults.object(forKey: "captions") as? Bool ?? true
         skipIntro = defaults.bool(forKey: "skipIntro")
         announceTurns = defaults.object(forKey: "announceTurns") as? Bool ?? true
+        musicVolume = defaults.object(forKey: "musicVolume") as? Double ?? 0.6
+        MusicPlayer.shared.volume = Float(musicVolume)
     }
 }
 

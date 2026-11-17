@@ -7,7 +7,8 @@ Your friend went missing. A letter in their handwriting brings you to Hollow Man
 and the Hunter and the Host want you to stay.
 
 - [Design](docs/DESIGN.md): story, characters, how it plays, accessibility, milestones
-- [TestFlight with Codemagic](docs/CODEMAGIC.md)
+- [TestFlight from GitHub](docs/GITHUB_TESTFLIGHT.md) (main route) and [with Codemagic](docs/CODEMAGIC.md)
+- [Credits](CREDITS.md) for the music and sounds
 
 ## Status: first playable
 
@@ -24,11 +25,11 @@ See **How to Play** in the app.
 - `Packages/ManorCore`: the game itself (house, Hunter, rules, spoken phrases). Pure Swift, unit-tested,
   runs on Linux too: `cd Packages/ManorCore && swift test`.
 - `App/`: the iOS app. SwiftUI menus, the play screen, 3D audio, speech, haptics, input.
-- `App/Voices/`: voice lines made with Kokoro. `App/Sounds/`: sound effects.
+- `App/Voices/`: voice lines made with Kokoro. `App/Sounds/`: sound effects. `App/Music/`: music.
 - `tools/voices/`: makes the voice lines. Edit `lines.json`, then run `tools/voices/generate.sh`, or run the
   **Generate voices** action on GitHub. Only changed lines are made again.
-- `tools/sfx/make_sounds.py`: makes the placeholder sound effects. Any of them can be swapped for a real recording
-  with the same file name.
+- `tools/sfx/import_real_sounds.py`: downloads the real recorded sounds and music (all CC0) and prepares them.
+  `tools/sfx/make_sounds.py` makes the few sounds that are still synthesized (clock, stings).
 - `project.yml`: XcodeGen spec. The Xcode project is generated, not committed.
 
 ## Voices
@@ -46,4 +47,5 @@ To add a line: add it to `tools/voices/lines.json` and to `VoiceLine` in
 
 GitHub Actions (`.github/workflows/build.yml`) runs the tests on Linux and builds the app on a macOS runner.
 Every push uploads an unsigned `HollowManor-unsigned.ipa` artifact as a compile check.
-Signed TestFlight builds go through Codemagic (`codemagic.yaml`).
+Signed TestFlight builds: run the **Build** workflow by hand on GitHub (see
+[docs/GITHUB_TESTFLIGHT.md](docs/GITHUB_TESTFLIGHT.md)), or use Codemagic (`codemagic.yaml`).

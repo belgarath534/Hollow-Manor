@@ -42,6 +42,13 @@ struct MainMenuView: View {
                         Text("Settings").frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
+
+                    NavigationLink {
+                        CreditsView()
+                    } label: {
+                        Text("Credits").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
                 }
                 .controlSize(.large)
                 .font(.title3.weight(.semibold))
@@ -54,6 +61,10 @@ struct MainMenuView: View {
             .padding()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black.ignoresSafeArea())
+        }
+        .onAppear { MusicPlayer.shared.play(.menu) }
+        .onChange(of: playing) { _, isPlaying in
+            if !isPlaying { MusicPlayer.shared.play(.menu) }
         }
         .fullScreenCover(isPresented: $playing) {
             GameScreen(settings: settings,

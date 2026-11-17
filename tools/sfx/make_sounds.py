@@ -1,10 +1,12 @@
 """Synthesizes Hollow Manor's sound effects into App/Sounds/*.wav.
 
-Placeholder sounds made from noise and tones, good enough to play with. Any file can be swapped for a real
-recording with the same name (mono for anything that moves around you in 3D).
+Synthesized sounds made from noise and tones. Most were replaced by real recordings (import_real_sounds.py);
+the clock, the doorway draft, the caught sting and the escape chime are still made here.
+Existing files are left alone, so real recordings are never overwritten. Pass --force to remake everything.
 
-Usage: python3 tools/sfx/make_sounds.py   (needs numpy)
+Usage: python3 tools/sfx/make_sounds.py [--force]   (needs numpy)
 """
+import sys
 import wave
 from pathlib import Path
 
@@ -83,6 +85,8 @@ def at(x, seconds, total):
 
 
 def save(name, x, peak=0.8, stereo=None):
+    if (OUT / f"{name}.wav").exists() and "--force" not in sys.argv:
+        return
     x = np.asarray(x, dtype=float)
     m = np.max(np.abs(x)) or 1
     x = x / m * peak
