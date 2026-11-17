@@ -27,7 +27,7 @@ jobs:
     # so that run only needs one Mac.
     name: iOS app build (macOS)
     if: github.event_name != 'workflow_dispatch'
-    runs-on: macos-15
+    runs-on: macos-latest
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
