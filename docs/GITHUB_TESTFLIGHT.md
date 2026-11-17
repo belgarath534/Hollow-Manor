@@ -1,7 +1,8 @@
 # TestFlight builds from GitHub
 
-The **Upload to TestFlight** job in `.github/workflows/build.yml` builds, signs and uploads Hollow Manor on
-GitHub's Mac runners. It only runs when you start it by hand.
+The **TestFlight** workflow (`.github/workflows/testflight.yml`) builds, signs and uploads Hollow Manor on
+GitHub's Mac runners. It only runs when you start it by hand. The **Tests** workflow runs the game's tests on
+every push, on Linux, so it never waits for a Mac.
 
 It works the same way as Truck Sim: **fastlane match** keeps the shared App Store certificate and each app's
 profile, encrypted in the private **ios-certificates** repository. The App Store Connect key comes from there too:
@@ -38,7 +39,8 @@ TestFlight needs the app to exist in App Store Connect, and Apple only lets you 
 
 ## Sending a build
 
-On GitHub, open **Actions**, then **Build**, then **Run workflow**, then **Run workflow** again.
+On GitHub, open **Actions**, then **TestFlight**, then **Run workflow**, then **Run workflow** again.
+If it sits on "Waiting for a runner" for more than 10 minutes, cancel it and run it again with another Mac picked.
 It runs the tests, then builds, signs and uploads, in about 10 to 15 minutes. Apple then processes the build,
 and it appears in TestFlight. The first time, add yourself to an Internal Testing group in the app's
 TestFlight tab. The "What to Test" notes come from `store/en-US/testflight/what_to_test.txt`.

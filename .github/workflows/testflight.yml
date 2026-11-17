@@ -1,8 +1,8 @@
-name: Build
+name: TestFlight
 
+# Builds, signs and uploads Hollow Manor to TestFlight. Only runs when started by hand:
+# Actions tab, TestFlight, Run workflow. See docs/GITHUB_TESTFLIGHT.md.
 on:
-  push:
-  pull_request:
   workflow_dispatch:
     inputs:
       mac:
@@ -12,7 +12,7 @@ on:
         options: [macos-latest, macos-15, macos-26]
 
 jobs:
-  core-tests:
+  tests:
     name: Game tests (Linux)
     runs-on: ubuntu-latest
     container: swift:6.0
@@ -22,49 +22,12 @@ jobs:
         working-directory: Packages/ManorCore
         run: swift test
 
-  ios-build:
-    # The compile check on every push. Skipped when you start a TestFlight run by hand, which builds the app anyway,
-    # so that run only needs one Mac.
-    name: iOS app build (macOS)
-    if: github.event_name != 'workflow_dispatch'
-    runs-on: macos-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install XcodeGen
-        run: brew install xcodegen
-      - name: Generate Xcode project
-        run: xcodegen generate
-      - name: Build unsigned app for iPhone
-        run: |
-          set -o pipefail
-          xcodebuild \
-            -project HollowManor.xcodeproj \
-            -scheme HollowManor \
-            -configuration Release \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            build
-      - name: Package unsigned IPA
-        run: |
-          mkdir -p Payload
-          cp -R build/Build/Products/Release-iphoneos/HollowManor.app Payload/
-          zip -qr HollowManor-unsigned.ipa Payload
-      - uses: actions/upload-artifact@v4
-        with:
-          name: HollowManor-unsigned-ipa
-          path: HollowManor-unsigned.ipa
-
   testflight:
-    # Signed build to TestFlight with fastlane match, the same way as Truck Sim and the RPG game.
-    # Only runs when started by hand: Actions tab, Build, Run workflow. See docs/GITHUB_TESTFLIGHT.md.
+    # Signed build with fastlane match, the same way as Truck Sim and the RPG game. See docs/GITHUB_TESTFLIGHT.md.
     name: Upload to TestFlight
-    needs: [core-tests]
+    needs: [tests]
     runs-on: ${{ inputs.mac || 'macos-latest' }}
     timeout-minutes: 90
-    if: github.event_name == 'workflow_dispatch'
     env:
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}

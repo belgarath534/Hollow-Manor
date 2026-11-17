@@ -45,7 +45,6 @@ To add a line: add it to `tools/voices/lines.json` and to `VoiceLine` in
 
 ## Building without a Mac
 
-GitHub Actions (`.github/workflows/build.yml`) runs the tests on Linux and builds the app on a macOS runner.
-Every push uploads an unsigned `HollowManor-unsigned.ipa` artifact as a compile check.
-Signed TestFlight builds: run the **Build** workflow by hand on GitHub (see
+The **Tests** workflow runs the game's tests on Linux on every push.
+Signed TestFlight builds: run the **TestFlight** workflow by hand on GitHub (see
 [docs/GITHUB_TESTFLIGHT.md](docs/GITHUB_TESTFLIGHT.md)), or use Codemagic (`codemagic.yaml`).
