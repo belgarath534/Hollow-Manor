@@ -31,7 +31,8 @@ struct GameScreen: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(12)
                         .frame(maxWidth: 600)
-                        .background(.black.opacity(0.7), in: RoundedRectangle(cornerRadius: 10))
+                        .background(Color.black, in: RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.25)))
                         .padding()
                         .accessibilityHidden(true) // already spoken
                 }

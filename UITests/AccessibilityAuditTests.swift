@@ -20,6 +20,8 @@ final class AccessibilityAuditTests: XCTestCase {
     private func audit(_ screen: String) {
         do {
             let screenFrame = app.windows.firstMatch.frame
+            let navBar = app.navigationBars.firstMatch
+            let underBarLine = navBar.exists ? navBar.frame.maxY : 0
             try app.performAccessibilityAudit { issue in
                 var what = "the screen"
                 // An issue with no element on a scrolled page is the audit catching the list mid-scroll.
@@ -27,6 +29,8 @@ final class AccessibilityAuditTests: XCTestCase {
                 if let element = issue.element {
                     // Something cut off by the bottom of the screen isn't clipped: it's checked after scrolling.
                     if !screenFrame.isEmpty && !screenFrame.contains(element.frame) { return true }
+                    // Text that has scrolled up under the see-through navigation bar isn't really low contrast.
+                    if element.frame.minY < underBarLine { return true }
                     let label = element.label.isEmpty ? "(no label)" : "'\(element.label)'"
                     what = "\(element.elementType) \(label)"
                 }

@@ -88,7 +88,7 @@ final class GameTouchView: UIView {
                 }
                 ctx.fill(r)
                 if plan.isDoor(c), let other = plan.roomsBeside(door: c).first(where: { $0 != room }) {
-                    drawText(other.name, in: r.insetBy(dx: -size, dy: 0), size: 11, color: .white)
+                    drawText(other.name, in: r.insetBy(dx: -size * 2.5, dy: -size * 0.2), size: 11, color: .white)
                 }
             }
         }
