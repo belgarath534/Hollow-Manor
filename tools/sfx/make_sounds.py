@@ -289,6 +289,42 @@ def tape_click():
     return mix(k, at(hum * env(int(0.5 * SR), 0.05, 0.2), 0.03, 0.6))
 
 
+def spotted_sting():
+    """The jump scare when he sees you: a hit and a screeching string cluster that swells."""
+    n = int(2.2 * SR)
+    tt = t(2.2)
+    screech = sum(np.sin(2 * np.pi * np.cumsum(f * (1 + 0.02 * np.sin(2 * np.pi * 7 * tt))) / SR)
+                  for f in (880, 932, 1245, 1319))
+    screech = biquad(screech + 0.3 * noise(2.2), "band", 1600, 0.8) * env(n, 0.03, 0.5)
+    hit = mix(thump(42, 0.8, 1.4), biquad(noise(0.8), "low", 300) * env(int(0.8 * SR), 0.001, 0.12))
+    return mix(hit, screech * 0.8)
+
+
+def drone(seconds=16.0):
+    """Low, uneasy and seamless: rises in the mix as he gets closer."""
+    tt = t(seconds)
+    # Whole number of cycles over the loop for every partial, so it loops without a click.
+    parts = [(36.0, 1.0), (37.0 + 1 / seconds, 0.8), (54.0, 0.35), (72.5 + 0.5 / seconds, 0.25), (110.0, 0.12)]
+    x = sum(a * np.sin(2 * np.pi * round(f * seconds) / seconds * tt) for f, a in parts)
+    air = biquad(noise(seconds), "band", 220, 2) * 0.25
+    fade = int(0.5 * SR)
+    air[:fade] = air[:fade] * np.linspace(0, 1, fade) + air[-fade:] * np.linspace(1, 0, fade)
+    air = np.concatenate([air[:-fade], air[-fade:] * 0])[: len(x)]
+    swell = 0.75 + 0.25 * np.sin(2 * np.pi * tt / seconds * 2)
+    return (x * 0.8 + air) * swell
+
+
+def breathing(fast=False):
+    """Your own scared breathing: one in and out, looped."""
+    inhale, exhale, gap = (0.45, 0.55, 0.1) if fast else (0.9, 1.2, 0.5)
+    def breath(length, freq):
+        n = noise(length)
+        shape = np.sin(np.pi * np.arange(len(n)) / len(n)) ** 1.5
+        return biquad(n, "band", freq, 1.2) * shape
+    x = np.concatenate([breath(inhale, 1800), np.zeros(int(0.05 * SR)), breath(exhale, 1100), np.zeros(int(gap * SR))])
+    return biquad(x, "high", 300)
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for surface in ["wood", "creakyWood", "carpet", "tile", "stone", "marble"]:
@@ -314,6 +350,10 @@ def main():
     save("bump", bump(), peak=0.7)
     save("door_cue", door_cue(), peak=0.5)
     save("tape_click", tape_click(), peak=0.6)
+    save("spotted", spotted_sting(), peak=0.95)
+    save("drone", drone(), peak=0.8)
+    save("breath_slow", breathing(), peak=0.6)
+    save("breath_fast", breathing(fast=True), peak=0.7)
     print("Sounds written to", OUT)
 
 

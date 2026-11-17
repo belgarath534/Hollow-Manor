@@ -131,6 +131,63 @@
       "id": "friend_tape_1",
       "speaker": "friend",
       "text": "If you found this tape, don't trust the letter. They made me write it. The front door key is always hidden somewhere downstairs, in a drawer or a cupboard. Search quietly. He hears everything. And stay off the hallway floorboards if he's close."
+    },
+    {
+      "id": "hunter_check_1",
+      "speaker": "hunter",
+      "text": "Are you in here, guest?"
+    },
+    {
+      "id": "hunter_check_2",
+      "speaker": "hunter",
+      "text": "Knock knock."
+    },
+    {
+      "id": "hunter_empty_1",
+      "speaker": "hunter",
+      "text": "Not in here."
+    },
+    {
+      "id": "hunter_empty_2",
+      "speaker": "hunter",
+      "text": "Empty. Hmm."
+    },
+    {
+      "id": "hunter_found_1",
+      "speaker": "hunter",
+      "text": "Peekaboo.",
+      "speed": 0.7
+    },
+    {
+      "id": "hunter_near_1",
+      "speaker": "hunter",
+      "text": "I can hear your heart beating."
+    },
+    {
+      "id": "hunter_near_2",
+      "speaker": "hunter",
+      "text": "So close now. I can smell you."
+    },
+    {
+      "id": "host_whisper_1",
+      "speaker": "host",
+      "text": "I can see you, sweetheart.",
+      "effect": "whisper",
+      "speed": 0.8
+    },
+    {
+      "id": "host_whisper_2",
+      "speaker": "host",
+      "text": "Shh. He's right behind you.",
+      "effect": "whisper",
+      "speed": 0.8
+    },
+    {
+      "id": "host_whisper_3",
+      "speaker": "host",
+      "text": "Don't make a sound.",
+      "effect": "whisper",
+      "speed": 0.8
     }
   ]
 }

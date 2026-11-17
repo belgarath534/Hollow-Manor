@@ -27,6 +27,16 @@ public enum VoiceLine: String, CaseIterable, Sendable {
     case hostEscaped = "host_escaped"
     case friendLetter = "friend_letter"
     case friendTape1 = "friend_tape_1"
+    case hunterCheck1 = "hunter_check_1"
+    case hunterCheck2 = "hunter_check_2"
+    case hunterEmpty1 = "hunter_empty_1"
+    case hunterEmpty2 = "hunter_empty_2"
+    case hunterFound = "hunter_found_1"
+    case hunterNear1 = "hunter_near_1"
+    case hunterNear2 = "hunter_near_2"
+    case hostWhisper1 = "host_whisper_1"
+    case hostWhisper2 = "host_whisper_2"
+    case hostWhisper3 = "host_whisper_3"
 
     public var speaker: Speaker {
         if rawValue.hasPrefix("hunter") { return .hunter }
@@ -34,8 +44,21 @@ public enum VoiceLine: String, CaseIterable, Sendable {
         return .friend
     }
 
+    /// Whispered right next to your ear instead of coming from upstairs.
+    public var isWhisper: Bool { rawValue.hasPrefix("host_whisper") }
+
     public var text: String {
         switch self {
+        case .hunterCheck1: return "Are you in here, guest?"
+        case .hunterCheck2: return "Knock knock."
+        case .hunterEmpty1: return "Not in here."
+        case .hunterEmpty2: return "Empty. Hmm."
+        case .hunterFound: return "Peekaboo."
+        case .hunterNear1: return "I can hear your heart beating."
+        case .hunterNear2: return "So close now. I can smell you."
+        case .hostWhisper1: return "I can see you, sweetheart."
+        case .hostWhisper2: return "Shh. He's right behind you."
+        case .hostWhisper3: return "Don't make a sound."
         case .hunterPatrol1: return "Where are you hiding, guest?"
         case .hunterPatrol2: return "Come out, come out. I won't bite. Much."
         case .hunterPatrol3: return "This house has a lot of rooms. I know every one of them."
@@ -72,4 +95,8 @@ public enum VoiceLine: String, CaseIterable, Sendable {
     static let hunterLost: [VoiceLine] = [.hunterLost1, .hunterLost2]
     static let hostHeard: [VoiceLine] = [.hostHeard1, .hostHeard2]
     static let hostTaunts: [VoiceLine] = [.hostTaunt1, .hostTaunt2]
+    static let hunterCheck: [VoiceLine] = [.hunterCheck1, .hunterCheck2]
+    static let hunterEmpty: [VoiceLine] = [.hunterEmpty1, .hunterEmpty2]
+    static let hunterNear: [VoiceLine] = [.hunterNear1, .hunterNear2]
+    static let hostWhispers: [VoiceLine] = [.hostWhisper1, .hostWhisper2, .hostWhisper3]
 }

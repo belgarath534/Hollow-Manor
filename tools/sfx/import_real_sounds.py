@@ -188,6 +188,14 @@ def main():
     sfx("bump", "woodmetal/wood_hit_01.ogg", "lowpass=f=2500")
     sfx("tape_click", "laleksic/switch_on.wav")
 
+    # --- The house, somewhere else: slams, dishes, a door, and him opening a hiding spot ---
+    sfx("house_slam", "sfx100/slam_03.ogg", "aecho=0.8:0.6:120|260:0.35|0.2")
+    sfx("house_dishes", "sfx100/dishes_02.ogg", "aecho=0.8:0.5:90|200:0.3|0.15")
+    sfx("house_door", "laleksic/door_creak_close.wav")
+    sfx("house_creak", "woodmetal/wood_squeak_01.ogg")
+    layered("spot_open", ["laleksic/door_creak_open.wav", "woodmetal/wood_hit_02.ogg"],
+            ["anull", "adelay=1100:all=1"], [1.0, 0.6])
+
     # --- Music (stereo AAC) ---
     for name, file in [("menu", "music_menu.ogg"), ("explore", "music_explore.ogg"), ("chase", "music_chase.ogg"),
                        ("caught", "music_sad.ogg"), ("escaped", "music_escaped.mp3")]:

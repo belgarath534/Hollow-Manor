@@ -29,6 +29,8 @@ final class GameController: NSObject, ObservableObject {
     private var started = false
     private var stopped = false
     private var nextThunder: CFTimeInterval = 0
+    private var nextHouseSound: CFTimeInterval = 0
+    private var tension: Float = 0
     private let music = MusicPlayer.shared
 
     init(settings: AppSettings) {
@@ -130,6 +132,7 @@ final class GameController: NSObject, ObservableObject {
         lastTimestamp = 0
         music.play(.explore, fade: 4)
         nextThunder = CACurrentMediaTime() + Double.random(in: 15...30)
+        nextHouseSound = CACurrentMediaTime() + Double.random(in: 20...35)
         if announce {
             announcer.speak(
                 "You're in the foyer. The front door is locked behind you. Find the key and get out. "
@@ -157,11 +160,42 @@ final class GameController: NSObject, ObservableObject {
         audio.setListener(at: game.player.cell, facing: game.player.facing)
         audio.setHunterOcclusion(hunterOcclusion())
         updateHeartbeat(now: now)
+        updateTension(dt: dt)
+        if now >= nextHouseSound {
+            playHouseSound()
+            nextHouseSound = now + Double.random(in: 25...55)
+        }
         if now >= nextThunder {
             audio.thunder()
             nextThunder = now + Double.random(in: 35...80)
         }
         view?.setNeedsDisplay()
+    }
+
+    /// Dread: rises smoothly as he gets closer.
+    private func updateTension(dt: Double) {
+        let d = game.plan.walkingDistance(from: game.player.cell, to: game.hunter.cell) ?? 99
+        let target: Float
+        if game.hunter.mode == .chase { target = 1 }
+        else if d <= 3 { target = 0.95 }
+        else if d <= 6 { target = 0.7 }
+        else if d <= 10 { target = 0.4 }
+        else if d <= 14 { target = 0.2 }
+        else { target = 0 }
+        let rate = Float(dt) * (target > tension ? 1.2 : 0.4)
+        tension += max(-rate, min(rate, target - tension))
+        audio.setTension(tension)
+    }
+
+    /// The house is never quiet: something slams or breaks somewhere you aren't.
+    private func playHouseSound() {
+        guard game.hunter.mode != .chase else { return }
+        let plan = game.plan
+        let far = plan.rooms.filter { $0 != game.playerRoom }.flatMap { plan.cells(in: $0) }
+            .filter { (plan.walkingDistance(from: game.player.cell, to: $0) ?? 0) >= 6 }
+        guard let cell = far.randomElement() else { return }
+        let name = ["house_slam", "house_dishes", "house_door", "house_creak", "house_creak"].randomElement()!
+        audio.houseSound(name, at: cell)
     }
 
     private func hunterOcclusion() -> Int {
@@ -257,6 +291,7 @@ final class GameController: NSObject, ObservableObject {
             case let .hunterStateChanged(mode):
                 if mode == .chase {
                     haptics.spotted()
+                    audio.effect("spotted")
                     music.play(.chase, fade: 0.4)
                 } else if music.current == .chase {
                     // Back to sneaking music once he's lost you.
@@ -265,7 +300,9 @@ final class GameController: NSObject, ObservableObject {
                         self.music.play(.explore, fade: 4)
                     }
                 }
-            case .turned, .enteredRoom, .enteredDoorway, .arrivedAt, .alreadySearched, .cantHideNow:
+            case let .hunterOpened(spot, _):
+                audio.hidingSpotOpened(at: spot.cell)
+            case .turned, .enteredRoom, .enteredDoorway, .arrivedAt, .alreadySearched, .cantHideNow, .hunterAtHidingSpot:
                 break
             }
             autoStop(for: event)

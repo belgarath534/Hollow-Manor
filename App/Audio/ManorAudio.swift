@@ -17,12 +17,20 @@ final class ManorAudio {
     private let hunterVoice = AVAudioPlayerNode()
     private let hostVoice = AVAudioPlayerNode()
     private let clock = AVAudioPlayerNode()
+    private let whisperNode = AVAudioPlayerNode()
+    private let houseNode = AVAudioPlayerNode()
+    private let spotNode = AVAudioPlayerNode()
     // Not in the house (plain stereo).
     private let narration = AVAudioPlayerNode()
     private let effects = AVAudioPlayerNode()
     private let heart = AVAudioPlayerNode()
     private let thunderNode = AVAudioPlayerNode()
     private let ambience = AVAudioPlayerNode()
+    private let droneNode = AVAudioPlayerNode()
+    private let breathNode = AVAudioPlayerNode()
+    private var breathKind = ""
+    private var listener = AVAudio3DPoint(x: 0, y: 0, z: 0)
+    private var listenerFacing: Facing = .north
 
     private var buffers: [String: AVAudioPCMBuffer] = [:]
     private var running = false
@@ -33,8 +41,10 @@ final class ManorAudio {
     /// Where the Host's voice comes from: upstairs, above the hallway.
     private let hostPosition = AVAudio3DPoint(x: 12, y: 5, z: 6.5)
 
-    private var spatial: [AVAudioPlayerNode] { [playerSteps, creaks, hunterSteps, hunterVoice, hostVoice, clock] }
-    private var flat: [AVAudioPlayerNode] { [narration, effects, heart, thunderNode] }
+    private var spatial: [AVAudioPlayerNode] {
+        [playerSteps, creaks, hunterSteps, hunterVoice, hostVoice, clock, whisperNode, houseNode, spotNode]
+    }
+    private var flat: [AVAudioPlayerNode] { [narration, effects, heart, thunderNode, droneNode, breathNode] }
 
     init() {
         engine.attach(environment)
@@ -58,6 +68,12 @@ final class ManorAudio {
         hostVoice.reverbBlend = 0.5
         hostVoice.occlusion = -8
         hostVoice.position = hostPosition
+        // Whispers are right at your ear: no room echo.
+        whisperNode.reverbBlend = 0
+        whisperNode.renderingAlgorithm = .HRTFHQ
+        houseNode.reverbBlend = 0.6
+        droneNode.volume = 0
+        breathNode.volume = 0
 
         for node in flat {
             engine.attach(node)
@@ -111,6 +127,8 @@ final class ManorAudio {
         paused = false
         for node in spatial + flat + [ambience] { node.play() }
         if let rain = buffer("amb_rain", "wav") { schedule(rain, on: ambience, options: .loops) }
+        if let drone = buffer("drone", "wav") { schedule(drone, on: droneNode, options: .loops) }
+        breathKind = ""
         if let tick = buffer("clock", "wav") {
             clock.position = point(Mansion.groundFloor.feature(id: "clock")?.cell ?? Cell(12, 6))
             clock.volume = 0.6
@@ -166,6 +184,8 @@ final class ManorAudio {
         }
         environment.listenerVectorOrientation = AVAudio3DVectorOrientation(
             forward: f, up: AVAudio3DVector(x: 0, y: 1, z: 0))
+        listener = point(cell)
+        listenerFacing = facing
         // Your own steps come from just below and slightly in front of you.
         let p = point(cell)
         playerSteps.position = AVAudio3DPoint(x: p.x + Float(facing.dx) * 0.3, y: -1.2, z: p.z + Float(facing.dy) * 0.3)
@@ -251,6 +271,33 @@ final class ManorAudio {
         schedule(b, on: heart)
     }
 
+    /// How close the Hunter is, 0 (far) to 1 (on top of you): a low drone rises, and you start breathing hard.
+    func setTension(_ level: Float) {
+        droneNode.volume = 0.55 * level
+        let kind = level > 0.75 ? "breath_fast" : (level > 0.4 ? "breath_slow" : "")
+        breathNode.volume = kind.isEmpty ? 0 : 0.5 * level
+        guard kind != breathKind else { return }
+        breathKind = kind
+        guard !kind.isEmpty, let b = buffer(kind, "wav") else { return }
+        schedule(b, on: breathNode, options: [.loops, .interrupts])
+    }
+
+    /// Something happening elsewhere in the house: a door slamming, dishes breaking.
+    func houseSound(_ name: String, at cell: Cell) {
+        guard let b = buffer(name, "wav") else { return }
+        houseNode.position = point(cell, height: 0.5)
+        houseNode.occlusion = -12
+        houseNode.volume = 0.9
+        schedule(b, on: houseNode)
+    }
+
+    /// The Hunter opening a wardrobe or cupboard.
+    func hidingSpotOpened(at cell: Cell) {
+        guard let b = buffer("spot_open", "wav") else { return }
+        spotNode.position = point(cell, height: 0.5)
+        schedule(b, on: spotNode)
+    }
+
     /// Plays a recorded line and returns how long it is, in seconds.
     @discardableResult
     func voice(_ line: VoiceLine, from cell: Cell?) -> Double {
@@ -260,6 +307,17 @@ final class ManorAudio {
         case .hunter:
             node = hunterVoice
             if let cell { hunterVoice.position = point(cell, height: 0.6) }
+        case .host where line.isWhisper:
+            // Just beside one ear, a little behind.
+            let side: Float = Bool.random() ? 0.35 : -0.35
+            let f = listenerFacing
+            // Right of the facing direction is (-dy, dx) in map terms.
+            whisperNode.position = AVAudio3DPoint(
+                x: listener.x + side * Float(-f.dy) - 0.15 * Float(f.dx),
+                y: 0.1,
+                z: listener.z + side * Float(f.dx) - 0.15 * Float(f.dy))
+            whisperNode.volume = 0.8
+            node = whisperNode
         case .host: node = hostVoice
         case .friend: node = narration
         }

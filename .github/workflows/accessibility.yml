@@ -1,0 +1,66 @@
+name: Accessibility check
+
+# Runs Apple's Accessibility Audit on every screen of the game in an iPhone simulator.
+# Started by hand: Actions tab, Accessibility check, Run workflow. Each problem is listed in the
+# "Summary" at the end, and the full results are saved as an artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      mac:
+        description: "Which Mac to run on (try another if the run sits waiting for a Mac)"
+        type: choice
+        default: macos-latest
+        options: [macos-latest, macos-15, macos-26]
+
+jobs:
+  audit:
+    name: Accessibility audit (iPhone simulator)
+    runs-on: ${{ inputs.mac || 'macos-latest' }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Make the Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Pick an iPhone simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          for runtime in sorted(devices, reverse=True):
+              if "iOS" not in runtime:
+                  continue
+              for d in devices[runtime]:
+                  if d["name"].startswith("iPhone") and d.get("isAvailable", True):
+                      print(d["udid"]); raise SystemExit
+          ')
+          echo "Using simulator $UDID"
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+      - name: Run the audit
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project HollowManor.xcodeproj \
+            -scheme HollowManor \
+            -destination "id=$UDID" \
+            -only-testing:HollowManorUITests \
+            -resultBundlePath AccessibilityResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee test.log
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Accessibility audit" >> "$GITHUB_STEP_SUMMARY"
+          if grep -q "AUDIT:" test.log; then
+            grep "AUDIT:" test.log | sed 's/.*AUDIT: /- /' | sort -u | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "The audit didn't run to the end; see the 'Run the audit' step." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: AccessibilityResults
+          path: AccessibilityResults.xcresult

@@ -177,17 +177,55 @@ final class GameTests: XCTestCase {
         XCTAssertEqual(game.outcome, .caught)
     }
 
-    func testHidingOutOfSightKeepsYouSafe() {
+    func testHidingOutOfSightKeepsYouSafeFromAWanderingHunter() {
         let game = Game(seed: 8)
         let wardrobe = Mansion.groundFloor.feature(id: "wardrobe")!
         game.debugPlace(player: wardrobe.cell)
         game.debugPlace(hunter: Cell(20, 1))
         XCTAssertEqual(game.perform(.interact).first, .hid(wardrobe))
-        // Even if he wanders right past.
-        game.debugPlace(hunter: Cell(6, 12), mode: .search)
-        run(game, seconds: 20)
+        // He walks right past while patrolling: patrolling, he doesn't open things.
+        game.debugPlace(hunter: Cell(6, 12), mode: .patrol)
+        run(game, seconds: 3)
         XCTAssertNil(game.outcome)
         XCTAssertFalse(game.hunter.sawPlayerHide)
+    }
+
+    func testSearchingHeOpensHidingSpotsAndSometimesFindsYou() {
+        var found = 0, opened = 0
+        for seed in 0..<40 {
+            let game = Game(seed: UInt64(seed), difficulty: .hard)
+            let wardrobe = Mansion.groundFloor.feature(id: "wardrobe")!
+            game.debugPlace(player: wardrobe.cell)
+            game.debugPlace(hunter: Cell(23, 12))
+            _ = game.perform(.interact)
+            game.debugPlace(hunter: Cell(8, 11), mode: .search)
+            let events = run(game, seconds: 25)
+            if events.contains(where: { if case .hunterOpened = $0 { return true } else { return false } }) { opened += 1 }
+            if events.contains(.hunterOpened(wardrobe, foundYou: true)) {
+                found += 1
+                XCTAssertEqual(game.outcome, .caught)
+                XCTAssertTrue(events.contains(.voice(.hunterFound, from: wardrobe.cell)))
+            }
+        }
+        XCTAssertGreaterThan(opened, 0, "he never opened a hiding spot")
+        XCTAssertGreaterThan(found, 0, "he never found anyone")
+        XCTAssertLessThan(found, 40, "hiding never worked")
+    }
+
+    func testHeAsksBeforeOpening() {
+        for seed in 0..<40 {
+            let game = Game(seed: UInt64(seed), difficulty: .hard)
+            game.debugPlace(player: Cell(23, 1))
+            game.debugPlace(hunter: Cell(8, 11), mode: .search)
+            let events = run(game, seconds: 20)
+            guard let at = events.firstIndex(where: { if case .hunterAtHidingSpot = $0 { return true } else { return false } })
+            else { continue }
+            let opened = events.firstIndex { if case .hunterOpened = $0 { return true } else { return false } }
+            XCTAssertNotNil(opened)
+            XCTAssertLessThan(at, opened!)
+            return
+        }
+        XCTFail("he never stopped at a hiding spot")
     }
 
     func testHidingWhileHeWatchesDoesntWork() {

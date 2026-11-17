@@ -29,6 +29,8 @@ EFFECTS = {
     "host": "highpass=f=90,treble=g=2,volume=1.1",
     # An old cassette: narrow and a little hissy.
     "tape": "highpass=f=250,lowpass=f=3800,acompressor=threshold=0.1:ratio=3,volume=1.3",
+    # Close and breathy: no low end, extra air.
+    "whisper": "highpass=f=400,treble=g=6:f=4000,acompressor=threshold=0.05:ratio=4,volume=1.4",
     "none": "anull",
 }
 

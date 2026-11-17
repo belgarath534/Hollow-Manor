@@ -19,6 +19,15 @@ public enum Difficulty: String, CaseIterable, Codable, Sendable {
         }
     }
 
+    /// How likely he is to open hiding spots near where he's searching.
+    var checkChance: Double {
+        switch self {
+        case .easy: return 0.3
+        case .normal: return 0.5
+        case .hard: return 0.75
+        }
+    }
+
     /// How far he can see, in steps.
     var sightRange: Double {
         switch self {
@@ -77,6 +86,10 @@ public enum GameEvent: Equatable, Sendable {
     /// A recorded line. `from` is where the speaker is; nil for the Host, who is somewhere upstairs.
     case voice(VoiceLine, from: Cell?)
     case hunterStateChanged(HunterMode)
+    /// He's stopped at a hiding spot and is about to open it.
+    case hunterAtHidingSpot(Feature)
+    /// He opened a hiding spot. If you were in it, he found you.
+    case hunterOpened(Feature, foundYou: Bool)
 }
 
 public enum HunterMode: Equatable, Sendable {
@@ -108,6 +121,11 @@ public struct Hunter: Sendable {
     var stepTimer: Double = 0
     var waitUntil: Double = 0
     var searchUntil: Double = 0
+    /// The hiding spot he's walking to, or standing at and about to open.
+    public var checking: Feature?
+    var checkAt: Double?
+    var lastChecked: [String: Double] = [:]
+    var foundHidden = false
 }
 
 /// Continuous movement input, set every frame by the app from touch, keyboard or controller.
@@ -151,6 +169,8 @@ public final class Game {
     private var lastRoom: Room?
     private var nextHunterBark: Double
     private var nextHostTaunt: Double
+    private var nextWhisper: Double = 40
+    private var nextNearLine: Double = 0
     private var speakerFreeAt: [Speaker: Double] = [:]
 
     private enum BusyAction { case search(Feature), unlock }
@@ -376,6 +396,8 @@ public final class Game {
             hunter.target = player.cell
             hunter.waitUntil = 0
             if hunter.mode != .chase {
+                hunter.checking = nil
+                hunter.checkAt = nil
                 events.append(contentsOf: setHunterMode(.chase))
                 if let line = pick(VoiceLine.hunterSpotted), claim(.hunter, for: 2) {
                     events.append(.voice(line, from: hunter.cell))
@@ -384,6 +406,10 @@ public final class Game {
         } else if hunter.mode == .chase, let spot = player.hidingIn, hunter.sawPlayerHide {
             // He saw where you went.
             hunter.target = spot.cell
+        }
+
+        if let at = hunter.checkAt, let spot = hunter.checking, time >= at {
+            events.append(contentsOf: openHidingSpot(spot))
         }
 
         hunter.stepTimer -= dt
@@ -428,7 +454,18 @@ public final class Game {
             hunter.waitUntil = time + 1.5
             hunter.target = nearbyCell()
         case .search:
-            if time >= hunter.searchUntil {
+            if let spot = hunter.checking, hunter.checkAt == nil, hunter.cell == spot.cell {
+                // At the hiding spot: stop, ask, and open it a moment later.
+                hunter.checkAt = time + 2.2
+                hunter.waitUntil = time + 3.2
+                events.append(.hunterAtHidingSpot(spot))
+                if let line = pick(VoiceLine.hunterCheck), claim(.hunter, for: 2) {
+                    events.append(.voice(line, from: hunter.cell))
+                }
+            } else if hunter.checking == nil, let spot = hidingSpotToCheck() {
+                hunter.checking = spot
+                hunter.target = spot.cell
+            } else if time >= hunter.searchUntil {
                 events.append(contentsOf: setHunterMode(.patrol))
                 hunter.target = patrolTarget()
             } else {
@@ -438,6 +475,35 @@ public final class Game {
             hunter.waitUntil = time + Double.random(in: 1.5...4, using: &rng)
             hunter.target = patrolTarget()
         }
+        return events
+    }
+
+    /// A hiding spot close to where he's searching that he hasn't opened lately, if he feels like checking one.
+    private func hidingSpotToCheck() -> Feature? {
+        let nearby = plan.features.filter { spot in
+            guard spot.kind == .hidingSpot else { return false }
+            if let last = hunter.lastChecked[spot.id], time - last < 40 { return false }
+            guard let d = plan.walkingDistance(from: hunter.cell, to: spot.cell) else { return false }
+            return d <= 6
+        }
+        guard !nearby.isEmpty, Double.random(in: 0..<1, using: &rng) < difficulty.checkChance else { return nil }
+        return nearby.randomElement(using: &rng)
+    }
+
+    private func openHidingSpot(_ spot: Feature) -> [GameEvent] {
+        hunter.checking = nil
+        hunter.checkAt = nil
+        hunter.lastChecked[spot.id] = time
+        hunter.searchUntil = max(hunter.searchUntil, time + 3)
+        if player.hidingIn == spot {
+            hunter.foundHidden = true
+            return [.hunterOpened(spot, foundYou: true), .voice(.hunterFound, from: hunter.cell)]
+        }
+        var events: [GameEvent] = [.hunterOpened(spot, foundYou: false)]
+        if let line = pick(VoiceLine.hunterEmpty), claim(.hunter, for: 2) {
+            events.append(.voice(line, from: hunter.cell))
+        }
+        hunter.target = nearbyCell()
         return events
     }
 
@@ -457,6 +523,7 @@ public final class Game {
     }
 
     private func checkCaught() -> Bool {
+        if hunter.foundHidden { return true }
         let near = hunter.cell.manhattan(to: player.cell) <= 1
         guard near else { return false }
         if player.hidingIn != nil { return hunter.sawPlayerHide && hunter.mode == .chase }
@@ -471,6 +538,20 @@ public final class Game {
             nextHunterBark = time + Double.random(in: 18...32, using: &rng)
             if let line = pick(VoiceLine.hunterPatrol), claim(.hunter, for: 4) {
                 events.append(.voice(line, from: hunter.cell))
+            }
+        }
+        let distance = plan.walkingDistance(from: hunter.cell, to: player.cell) ?? 99
+        let unseen = player.hidingIn != nil || !hunterHasLineOfSight
+        if hunter.mode != .chase && unseen && distance <= 4 && time >= nextNearLine {
+            nextNearLine = time + Double.random(in: 12...20, using: &rng)
+            if let line = pick(VoiceLine.hunterNear), claim(.hunter, for: 3) {
+                events.append(.voice(line, from: hunter.cell))
+            }
+        }
+        if hunter.mode != .chase && distance <= 8 && time >= nextWhisper {
+            nextWhisper = time + Double.random(in: 40...75, using: &rng)
+            if let line = pick(VoiceLine.hostWhispers), claim(.host, for: 4) {
+                events.append(.voice(line, from: player.cell))
             }
         }
         if time >= nextHostTaunt {

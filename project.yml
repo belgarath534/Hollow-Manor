@@ -51,4 +51,21 @@ targets:
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-    scheme: {}
+    scheme:
+      testTargets:
+        - HollowManorUITests
+  HollowManorUITests:
+    # Apple's Accessibility Audit on every screen. Run by the "Accessibility check" workflow.
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - UITests
+    dependencies:
+      - target: HollowManor
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hollowmanor.HollowManorUITests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        TEST_TARGET_NAME: HollowManor

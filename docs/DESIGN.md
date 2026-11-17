@@ -50,7 +50,10 @@ Voices move around you in 3D and are muffled through walls, so every line also t
 - **Walking is quiet. Running is loud.** Your footsteps make noise. Noise travels through doors and corridors.
   If the Hunter hears it, he comes to look.
 - **Searching** drawers, cupboards and desks makes a little noise. Items are hidden in different places every game.
-- **Hiding** in wardrobes, cupboards and under tables keeps you safe, unless he saw you get in.
+- **Hiding** in wardrobes, cupboards and under tables. If he saw you get in, he drags you out. When he's
+  searching, he stops at hiding spots, asks "Are you in here, guest?" and opens them, so hiding is never fully safe.
+- **Dread:** a low drone and your own breathing rise as he gets closer. A sting hits when he spots you.
+  The Host whispers right in your ear (not always the truth), and the house makes noises in other rooms.
 - **Getting caught** ends the night. (Later: a few "days" like lives, each one making the house harder.)
 - **Escaping** means finding the way out. In the first version, that's the front door key.
 

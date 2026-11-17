@@ -140,6 +140,8 @@ public enum Phrases {
             return capitalized(facing.name)
         case .bump:
             return "Wall"
+        case .hunterAtHidingSpot, .hunterOpened:
+            return nil
         case .footstep, .creak, .voice, .hunterStateChanged:
             return nil
         }

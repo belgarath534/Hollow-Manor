@@ -19,6 +19,7 @@ struct HowToPlayView: View {
             }
             Section("The Host") {
                 Text("She's somewhere upstairs. You'll hear her talking to him, and to you. When she says \"Did you hear that, darling?\", he's on his way.")
+                Text("Sometimes she whispers right in your ear. Don't always believe her.")
             }
             Section("Noise") {
                 Text("Every step makes noise. Carpet and stone are quiet. Tile and marble are louder. "
@@ -27,7 +28,9 @@ struct HowToPlayView: View {
             }
             Section("Hiding") {
                 Text("Wardrobes, cupboards, the coat closet, under the dining table and behind the flour sacks. "
-                    + "Hiding keeps you safe, unless he watched you get in.")
+                    + "If he watched you get in, he'll drag you out.")
+                Text("When he's searching, he opens hiding spots. If you hear him stop close by and ask \"Are you in here?\", "
+                    + "hold your breath. He might pick yours. Sometimes it's better to sneak away than to hide.")
             }
             Section("Touch controls") {
                 control("Walk", "Swipe up. You keep walking until you stop")
