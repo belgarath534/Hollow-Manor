@@ -30,6 +30,7 @@ final class GameController: NSObject, ObservableObject {
     private var stopped = false
     private var nextThunder: CFTimeInterval = 0
     private var nextHouseSound: CFTimeInterval = 0
+    private var lastDrawn = ""
     private var tension: Float = 0
     private let music = MusicPlayer.shared
 
@@ -169,6 +170,17 @@ final class GameController: NSObject, ObservableObject {
             audio.thunder()
             nextThunder = now + Double.random(in: 35...80)
         }
+        redrawIfChanged()
+    }
+
+    /// The play screen is redrawn only when something on it changed, not every frame (saves battery, and lets
+    /// Apple's accessibility audit see a still screen).
+    private func redrawIfChanged() {
+        let p = game.player, h = game.hunter
+        let seen = game.hunterHasLineOfSight && p.hidingIn == nil
+        let state = "\(p.cell)\(p.facing)\(p.hidingIn?.id ?? "")\(p.items.count)\(game.searched.count)\(seen ? "\(h.cell)" : "-")"
+        guard state != lastDrawn else { return }
+        lastDrawn = state
         view?.setNeedsDisplay()
     }
 

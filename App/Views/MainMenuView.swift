@@ -8,14 +8,20 @@ struct MainMenuView: View {
 
     var body: some View {
         NavigationStack {
+            GeometryReader { geo in
+            ScrollView {
             VStack(spacing: 28) {
                 Spacer()
                 VStack(spacing: 8) {
                     Text("Hollow Manor")
                         .font(.system(.largeTitle, design: .serif).weight(.bold))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
                     Text("You're invited.")
                         .font(.system(.title3, design: .serif).italic())
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -55,11 +61,15 @@ struct MainMenuView: View {
                 .frame(maxWidth: 420)
                 Text("Headphones recommended.")
                     .font(.footnote)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.secondary)
                 Spacer()
             }
             .padding()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, minHeight: geo.size.height)
+            }
+            }
             .background(Color.black.ignoresSafeArea())
         }
         .onAppear { MusicPlayer.shared.play(.menu) }

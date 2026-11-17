@@ -24,17 +24,17 @@ struct CreditsView: View {
             Section {
                 Text("All music and sound effects are public domain (CC0), from OpenGameArt.org. Thank you to these artists.")
             }
-            Section("Music") {
+            TitledSection(title: "Music") {
                 ForEach(music, id: \.1) { use, title, artist in
                     row(title, "\(artist). \(use).")
                 }
             }
-            Section("Sound effects") {
+            TitledSection(title: "Sound effects") {
                 ForEach(sounds, id: \.0) { what, who in
                     row(what, who)
                 }
             }
-            Section("Voices") {
+            TitledSection(title: "Voices") {
                 row("Kokoro text to speech", "hexgrad. The Hunter is Lewis, the Host is Heart.")
             }
         }
