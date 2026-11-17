@@ -4,6 +4,12 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      mac:
+        description: "Which Mac to build on (try another if the run sits waiting for a Mac)"
+        type: choice
+        default: macos-latest
+        options: [macos-latest, macos-15, macos-26]
 
 jobs:
   core-tests:
@@ -17,8 +23,12 @@ jobs:
         run: swift test
 
   ios-build:
+    # The compile check on every push. Skipped when you start a TestFlight run by hand, which builds the app anyway,
+    # so that run only needs one Mac.
     name: iOS app build (macOS)
+    if: github.event_name != 'workflow_dispatch'
     runs-on: macos-15
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
@@ -51,8 +61,8 @@ jobs:
     # Signed build to TestFlight with fastlane match, the same way as Truck Sim and the RPG game.
     # Only runs when started by hand: Actions tab, Build, Run workflow. See docs/GITHUB_TESTFLIGHT.md.
     name: Upload to TestFlight
-    needs: [core-tests, ios-build]
-    runs-on: macos-15
+    needs: [core-tests]
+    runs-on: ${{ inputs.mac || 'macos-latest' }}
     timeout-minutes: 90
     if: github.event_name == 'workflow_dispatch'
     env:
