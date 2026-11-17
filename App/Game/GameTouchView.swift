@@ -87,9 +87,12 @@ final class GameTouchView: UIView {
                     ctx.setFillColor(floorColor(plan.surface(at: c), contrast: contrast).cgColor)
                 }
                 ctx.fill(r)
-                if plan.isDoor(c), let other = plan.roomsBeside(door: c).first(where: { $0 != room }) {
-                    drawText(other.name, in: r.insetBy(dx: -size * 2.5, dy: -size * 0.2), size: 11, color: .white)
-                }
+            }
+        }
+        // Door labels after the floor, so the next squares don't paint over them.
+        for door in plan.doors(of: room) {
+            if let other = plan.roomsBeside(door: door).first(where: { $0 != room }) {
+                drawText(other.name, in: rect(door).insetBy(dx: -size * 2.5, dy: -size * 0.2), size: 11, color: .white)
             }
         }
 

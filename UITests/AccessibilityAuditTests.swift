@@ -59,7 +59,7 @@ final class AccessibilityAuditTests: XCTestCase {
         // Scroll down and check what was below the edge.
         for page in 2...4 {
             app.swipeUp()
-            sleep(1)
+            sleep(3) // let the list stop gliding before looking
             audit("\(screen), page \(page)")
         }
         app.navigationBars.buttons.firstMatch.tap()
@@ -74,7 +74,7 @@ final class AccessibilityAuditTests: XCTestCase {
         open("Credits", audit: "Credits")
 
         app.buttons["Play"].tap()
-        sleep(4)
+        sleep(10) // past the Host's welcome, so the caption isn't changing mid-audit
         audit("Playing")
 
         print("AUDIT: \(issues.count) problem(s) found")
