@@ -27,6 +27,8 @@ struct GameScreen: View {
                     Text(controller.caption)
                         .font(.callout.weight(.medium))
                         .multilineTextAlignment(.center)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(12)
                         .frame(maxWidth: 600)
                         .background(.black.opacity(0.7), in: RoundedRectangle(cornerRadius: 10))

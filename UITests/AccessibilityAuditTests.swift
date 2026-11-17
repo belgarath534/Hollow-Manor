@@ -16,9 +16,12 @@ final class AccessibilityAuditTests: XCTestCase {
 
     private func audit(_ screen: String) {
         do {
+            let screenFrame = app.windows.firstMatch.frame
             try app.performAccessibilityAudit { issue in
                 var what = "the screen"
                 if let element = issue.element {
+                    // Something cut off by the bottom of the screen isn't clipped: it's checked after scrolling.
+                    if !screenFrame.isEmpty && !screenFrame.contains(element.frame) { return true }
                     let label = element.label.isEmpty ? "(no label)" : "'\(element.label)'"
                     what = "\(element.elementType) \(label)"
                 }
@@ -39,6 +42,12 @@ final class AccessibilityAuditTests: XCTestCase {
         link.tap()
         sleep(1)
         audit(screen)
+        // Scroll down and check what was below the edge.
+        for page in 2...4 {
+            app.swipeUp()
+            sleep(1)
+            audit("\(screen), page \(page)")
+        }
         app.navigationBars.buttons.firstMatch.tap()
         sleep(1)
     }
