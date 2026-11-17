@@ -74,9 +74,10 @@ Voices move around you in 3D and are muffled through walls, so every line also t
 
 | | Touch | Keyboard | Controller |
 |---|---|---|---|
-| Walk | Touch and drag up, hold | W / Up arrow (hold) | Left stick up |
-| Run | Drag up further | Hold Shift while walking | Hold right trigger while walking |
-| Step back | Touch and drag down, hold | S / Down arrow | Left stick down |
+| Walk | Swipe up (keeps walking, stops by itself at doors, furniture and walls) | W / Up arrow (hold) | Left stick up |
+| Run | Swipe up again while walking | Hold Shift while walking | Hold right trigger while walking |
+| Stop | Tap once | Let go | Let go |
+| Turn around | Swipe down while stopped | X | D-pad down |
 | Turn left / right | Quick swipe left / right | A / D or Left / Right arrow | D-pad left / right or left shoulder / right shoulder |
 | Search, hide, use | Double tap | Space or E | A |
 | Describe | Two-finger tap | Q or Tab | X |

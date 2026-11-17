@@ -68,7 +68,7 @@ final class ManorAudio {
         } else {
             engine.connect(ambience, to: engine.mainMixerNode, format: mono)
         }
-        ambience.volume = 0.35
+        ambience.volume = 0.1
         heart.volume = 0
 
         let distance = environment.distanceAttenuationParameters
@@ -205,10 +205,19 @@ final class ManorAudio {
         effects.play()
     }
 
+    /// Rain and thunder volume, 0 to 1 (the player's setting). The clock isn't affected: it helps you find your way.
+    private var weatherLevel: Float = 0.5
+
+    func setWeatherVolume(_ level: Float) {
+        weatherLevel = level
+        ambience.volume = 0.2 * level
+    }
+
     /// Distant thunder, outside.
     func thunder() {
         guard let b = buffer("thunder_\(Int.random(in: 1...2))", "wav") else { return }
-        thunderNode.volume = Float.random(in: 0.35...0.8)
+        guard weatherLevel > 0 else { return }
+        thunderNode.volume = Float.random(in: 0.35...0.8) * min(1, weatherLevel * 1.5)
         thunderNode.scheduleBuffer(b, at: nil, options: .interrupts)
     }
 

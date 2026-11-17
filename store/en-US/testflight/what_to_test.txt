@@ -2,6 +2,6 @@ Hollow Manor, first playable. Use headphones.
 
 Find the front door key (it's in a different drawer or cupboard every game), then unlock the front door in the foyer without getting caught. Listen for the Hunter's boots and voice, and hide when he's close.
 
-Touch: drag up and hold to walk (further to run), swipe left or right to turn, double tap to search or hide, two-finger tap to describe the room, three-finger tap to listen for the Hunter.
+Touch: swipe up to walk (swipe up again to run, tap to stop), swipe left or right to turn, double tap to search or hide, two-finger tap to describe the room, three-finger tap to listen for the Hunter.
 
 Tell us: is the Hunter too easy or too hard? Can you tell where he is by sound? Are the controls comfortable with VoiceOver?

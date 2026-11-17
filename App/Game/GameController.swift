@@ -47,6 +47,7 @@ final class GameController: NSObject, ObservableObject {
     func start() {
         guard !started else { return }
         started = true
+        audio.setWeatherVolume(Float(settings.weatherVolume))
         audio.start()
         haptics.start()
         hardware.start()
@@ -132,6 +133,7 @@ final class GameController: NSObject, ObservableObject {
         if announce {
             announcer.speak(
                 "You're in the foyer. The front door is locked behind you. Find the key and get out. "
+                    + "Swipe up to walk, and tap to stop. Swipe left or right to turn. "
                     + "Two-finger tap any time to hear what's around you.",
                 priority: .high)
         }
@@ -266,6 +268,7 @@ final class GameController: NSObject, ObservableObject {
             case .turned, .enteredRoom, .enteredDoorway, .arrivedAt, .alreadySearched, .cantHideNow:
                 break
             }
+            autoStop(for: event)
             speak(for: event)
         }
     }
@@ -338,14 +341,16 @@ final class GameController: NSObject, ObservableObject {
         var startTime: CFTimeInterval
         var maxTouches: Int
         var current: CGPoint
-        var walking = false
     }
 
     private var gesture: Gesture?
     private var lastTapTime: CFTimeInterval = 0
 
-    /// Touch: drag up and hold to walk (further to run), drag down to step back, swipe left or right to turn,
-    /// double tap to use, two-finger tap to describe, three-finger tap to listen, two-finger swipe down to pause.
+    private var isWalking: Bool { touchInput.direction != 0 }
+
+    /// Touch: swipe up to walk (you keep walking), swipe up again to run, tap to stop, swipe down to stop or turn
+    /// around, swipe left or right to turn, double tap to use, two-finger tap to describe, three-finger tap to listen,
+    /// two-finger swipe down to pause. Walking stops by itself at doorways, furniture and walls.
     func touchesChanged(_ event: UIEvent?, in view: UIView) {
         let active = (event?.allTouches ?? []).filter { $0.phase != .ended && $0.phase != .cancelled }
         let now = CACurrentMediaTime()
@@ -359,7 +364,6 @@ final class GameController: NSObject, ObservableObject {
                     g.start = centroid
                 }
                 g.current = centroid
-                if g.maxTouches == 1 { updateWalking(&g) }
                 gesture = g
             } else {
                 finishGesture(g, now: now)
@@ -370,32 +374,23 @@ final class GameController: NSObject, ObservableObject {
         }
     }
 
-    private func updateWalking(_ g: inout Gesture) {
-        let up = g.start.y - g.current.y
-        let side = abs(g.current.x - g.start.x)
-        if !g.walking && abs(up) > 30 && abs(up) > side { g.walking = true }
-        guard g.walking else { return }
-        if up > 30 {
-            touchInput = MoveInput(direction: 1, run: up > 120)
-        } else if up < -30 {
-            touchInput = MoveInput(direction: -1)
-        } else {
-            touchInput = MoveInput()
-        }
-    }
-
     private func finishGesture(_ g: Gesture, now: CFTimeInterval) {
-        touchInput = MoveInput()
         let dx = g.current.x - g.start.x, dy = g.current.y - g.start.y
         let moved = (dx * dx + dy * dy).squareRoot()
         let duration = now - g.startTime
         switch g.maxTouches {
         case 1:
-            if g.walking { return }
-            if abs(dx) > 45 && abs(dx) > abs(dy) * 1.5 && duration < 0.8 {
+            let swipe = moved > 40 && duration < 0.8
+            if swipe && abs(dy) > abs(dx) * 1.2 {
+                if dy < 0 { swipeUp() } else { swipeDown() }
+            } else if swipe && abs(dx) > abs(dy) * 1.2 {
+                stopWalking(announce: false)
                 handle(dx > 0 ? .turnRight : .turnLeft)
             } else if moved < 20 && duration < 0.35 {
-                if now - lastTapTime < 0.4 {
+                if isWalking {
+                    stopWalking(announce: true)
+                    lastTapTime = 0
+                } else if now - lastTapTime < 0.4 {
                     lastTapTime = 0
                     handle(.interact)
                 } else {
@@ -410,6 +405,53 @@ final class GameController: NSObject, ObservableObject {
             }
         default:
             if moved < 40 && duration < 0.6 { handle(.listen) }
+        }
+    }
+
+    private func swipeUp() {
+        guard phase == .playing else {
+            if phase == .intro { finishIntro(announce: true) }
+            return
+        }
+        if game.player.hidingIn != nil {
+            announcer.speak("You're hiding. Double tap to come out first.", priority: .high)
+            return
+        }
+        if isWalking && !touchInput.run {
+            touchInput = MoveInput(direction: 1, run: true)
+            announcer.speak("Running", priority: .high)
+        } else if !isWalking {
+            touchInput = MoveInput(direction: 1)
+            announcer.speak("Walking", priority: .high)
+        }
+    }
+
+    private func swipeDown() {
+        guard phase == .playing else { return }
+        if isWalking {
+            stopWalking(announce: true)
+        } else {
+            handle(.turnAround)
+        }
+    }
+
+    private func stopWalking(announce: Bool) {
+        guard isWalking else { return }
+        touchInput = MoveInput()
+        if announce { announcer.speak("Stopped", priority: .high) }
+    }
+
+    /// Walking with touch stops by itself where there's something to know about. Running only stops at walls,
+    /// so you can get away.
+    private func autoStop(for event: GameEvent) {
+        guard isWalking else { return }
+        switch event {
+        case .bump, .hid, .searchStarted, .unlockStarted, .caught, .escaped:
+            touchInput = MoveInput()
+        case .arrivedAt, .enteredDoorway:
+            if !touchInput.run { touchInput = MoveInput() }
+        default:
+            break
         }
     }
 }

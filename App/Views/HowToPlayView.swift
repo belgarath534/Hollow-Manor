@@ -30,14 +30,17 @@ struct HowToPlayView: View {
                     + "Hiding keeps you safe, unless he watched you get in.")
             }
             Section("Touch controls") {
-                control("Walk", "Touch and drag up, then hold")
-                control("Run", "Drag up further")
-                control("Step back", "Touch and drag down, then hold")
-                control("Turn", "Quick swipe left or right")
+                control("Walk", "Swipe up. You keep walking until you stop")
+                control("Run", "Swipe up again while walking")
+                control("Stop", "Tap once")
+                control("Turn", "Swipe left or right")
+                control("Turn around", "Swipe down while standing still")
                 control("Search, hide, come out, unlock", "Double tap")
                 control("Describe the room", "Two-finger tap")
                 control("Listen for the Hunter", "Three-finger tap")
                 control("Pause", "Two-finger swipe down")
+                Text("Walking stops by itself at doorways, at things you can use, and at walls, and tells you what's there. "
+                    + "Running only stops at walls, so you can get away.")
             }
             Section("Keyboard") {
                 control("Walk, step back", "W and S, or Up and Down")

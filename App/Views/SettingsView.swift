@@ -39,8 +39,15 @@ struct SettingsView: View {
                     }
                     .accessibilityValue(settings.musicVolume == 0 ? "Off" : "\(Int(settings.musicVolume * 100)) percent")
                 }
+                VStack(alignment: .leading) {
+                    Text("Rain and thunder")
+                    Slider(value: $settings.weatherVolume, in: 0...1, step: 0.1) {
+                        Text("Rain and thunder")
+                    }
+                    .accessibilityValue(settings.weatherVolume == 0 ? "Off" : "\(Int(settings.weatherVolume * 100)) percent")
+                }
             } header: {
-                Text("Music")
+                Text("Volume")
             } footer: {
                 Text("Music gets quieter while the game is speaking.")
             }

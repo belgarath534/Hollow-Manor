@@ -19,7 +19,7 @@ final class GameTouchView: UIView {
         contentMode = .redraw
         isAccessibilityElement = true
         accessibilityLabel = "Hollow Manor"
-        accessibilityHint = "Touches go directly to the game. Drag up and hold to walk. Two-finger tap to describe the room."
+        accessibilityHint = "Touches go directly to the game. Swipe up to walk, tap to stop. Two-finger tap to describe the room."
         accessibilityTraits = .allowsDirectInteraction
     }
 

@@ -28,6 +28,10 @@ final class AppSettings: ObservableObject {
             MusicPlayer.shared.volume = Float(musicVolume)
         }
     }
+    /// Rain and thunder, 0 is off, 1 is full.
+    @Published var weatherVolume: Double {
+        didSet { defaults.set(weatherVolume, forKey: "weatherVolume") }
+    }
     /// Say north, east, south or west after every turn.
     @Published var announceTurns: Bool {
         didSet { defaults.set(announceTurns, forKey: "announceTurns") }
@@ -41,6 +45,7 @@ final class AppSettings: ObservableObject {
         skipIntro = defaults.bool(forKey: "skipIntro")
         announceTurns = defaults.object(forKey: "announceTurns") as? Bool ?? true
         musicVolume = defaults.object(forKey: "musicVolume") as? Double ?? 0.6
+        weatherVolume = defaults.object(forKey: "weatherVolume") as? Double ?? 0.5
         MusicPlayer.shared.volume = Float(musicVolume)
     }
 }
