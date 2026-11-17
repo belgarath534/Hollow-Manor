@@ -1,0 +1,43 @@
+name: Generate voices
+
+# Makes any new or changed lines in tools/voices/lines.json with Kokoro and commits the audio files.
+# Run it from the Actions tab: Generate voices, Run workflow. Tick "all" to make every line again.
+on:
+  workflow_dispatch:
+    inputs:
+      all:
+        description: "Make every line again, not just changed ones"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  voices:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Cache the Kokoro model
+        uses: actions/cache@v4
+        with:
+          path: tools/voices/models
+          key: kokoro-v1.0
+      - name: Make the voice lines
+        run: tools/voices/generate.sh ${{ inputs.all && '--all' || '' }}
+      - name: Commit new audio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add App/Voices
+          if git diff --cached --quiet; then
+            echo "No voice changes."
+          else
+            git commit -m "Update voice lines"
+            git push
+          fi

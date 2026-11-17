@@ -1,0 +1,111 @@
+# Hollow Manor on Codemagic, set up the same way as Truck Sim and Dungeon Descent:
+# same App Store Connect key ("Accessible Backrooms") and same distribution certificate.
+# Start builds by hand in Codemagic. Every successful build goes to TestFlight. See docs/CODEMAGIC.md.
+workflows:
+  hollow-manor-testflight:
+    name: Hollow Manor TestFlight
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Accessible Backrooms
+    environment:
+      ios_signing:
+        # Codemagic insists on at least one saved profile here before it will load the certificate.
+        # This one belongs to Dungeon Descent (a different bundle ID), so it is never used for Hollow Manor;
+        # Hollow Manor's own profile comes from Apple in the step below.
+        provisioning_profiles:
+          - Dungeon Descent Live Activity App Store
+        certificates:
+          - Accessible Backrooms Distribution
+      vars:
+        BUNDLE_ID: com.hollowmanor.HollowManor
+        PROFILE_NAME: Hollow Manor App Store
+      xcode: 27.1
+    scripts:
+      - name: Run the game tests
+        script: |
+          cd Packages/ManorCore
+          swift test
+      - name: Set build number and make the Xcode project
+        script: |
+          set -e
+          # The next build number after the newest one on TestFlight, so they always go up.
+          APP_ID=$(app-store-connect apps list --bundle-id-identifier "$BUNDLE_ID" --strict-match-identifier --json 2>/dev/null \
+            | python3 -c 'import json,sys
+          try:
+              d=json.load(sys.stdin); print(d[0]["id"] if d else "")
+          except Exception:
+              print("")' || true)
+          LATEST=""
+          if [ -n "$APP_ID" ]; then
+            LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_ID" 2>/dev/null | tail -1 | tr -dc '0-9' || true)
+          fi
+          NEXT=$(( ${LATEST:-0} + 1 ))
+          [ "$NEXT" -gt "$BUILD_NUMBER" ] || NEXT=$BUILD_NUMBER
+          echo "Build number $NEXT"
+          sed -i '' "s/CURRENT_PROJECT_VERSION: \"[0-9]*\"/CURRENT_PROJECT_VERSION: \"$NEXT\"/" project.yml
+          brew install xcodegen
+          xcodegen generate
+      - name: Get the App Store profile from Apple
+        script: |
+          # Registers the bundle ID and creates the profile the first time; reuses them after that.
+          set -e
+          DEST="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$DEST"
+
+          BID=$(app-store-connect bundle-ids list --bundle-id-identifier "$BUNDLE_ID" --strict-match-identifier --platform IOS --json \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["id"] if d else "")')
+          if [ -z "$BID" ]; then
+            echo "Registering bundle ID $BUNDLE_ID with Apple"
+            BID=$(app-store-connect bundle-ids create "$BUNDLE_ID" --name "Hollow Manor" --platform IOS --json \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+          fi
+          echo "Bundle ID resource: $BID"
+
+          TMP=$(mktemp -d)
+          app-store-connect profiles list --type IOS_APP_STORE --state ACTIVE --name "$PROFILE_NAME" --save --profiles-dir "$TMP" || true
+          if ls "$TMP"/*.mobileprovision >/dev/null 2>&1; then
+            echo "Using the existing \"$PROFILE_NAME\" profile"
+            cp "$TMP"/*.mobileprovision "$DEST/"
+            exit 0
+          fi
+
+          # Find the Apple certificate that matches the distribution certificate Codemagic put in the keychain.
+          PEM=$(security find-certificate -a -c "Apple Distribution" -p || true)
+          [ -n "$PEM" ] || PEM=$(security find-certificate -a -c "iPhone Distribution" -p)
+          SERIAL=$(echo "$PEM" | openssl x509 -noout -serial | cut -d= -f2)
+          CERT_ID=""
+          for TYPE in DISTRIBUTION IOS_DISTRIBUTION; do
+            CERT_ID=$(app-store-connect certificates list --type $TYPE --json | SERIAL="$SERIAL" python3 -c '
+          import json, os, sys
+          want = os.environ["SERIAL"].upper().lstrip("0")
+          for c in json.load(sys.stdin):
+              serial = (c.get("attributes") or c).get("serialNumber", "")
+              if serial.upper().lstrip("0") == want:
+                  print(c["id"]); break
+          ')
+            [ -n "$CERT_ID" ] && break
+          done
+          if [ -z "$CERT_ID" ]; then
+            echo "Could not find the Accessible Backrooms Distribution certificate on Apple"
+            exit 1
+          fi
+
+          echo "Creating the \"$PROFILE_NAME\" profile"
+          app-store-connect profiles create "$BID" --type IOS_APP_STORE --certificate-ids "$CERT_ID" \
+            --name "$PROFILE_NAME" --save --profiles-dir "$DEST"
+      - name: Use the App Store signing profile
+        script: |
+          xcode-project use-profiles --project HollowManor.xcodeproj
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --project HollowManor.xcodeproj \
+            --scheme HollowManor
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false  # internal testers get every build anyway

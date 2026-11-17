@@ -1,0 +1,136 @@
+{
+  "_readme": "Every recorded line in Hollow Manor. Change or add a line here (and in VoiceLines.swift), then run tools/voices/generate.sh. Only changed lines are made again. 'speed' is optional (1.0 is normal).",
+  "speakers": {
+    "hunter": {
+      "voice": "bm_lewis",
+      "lang": "en-gb",
+      "speed": 0.82,
+      "effect": "hunter"
+    },
+    "host": {
+      "voice": "af_heart",
+      "lang": "en-us",
+      "speed": 0.9,
+      "effect": "host"
+    },
+    "friend": {
+      "voice": "am_michael",
+      "lang": "en-us",
+      "speed": 0.98,
+      "effect": "tape"
+    }
+  },
+  "lines": [
+    {
+      "id": "hunter_patrol_1",
+      "speaker": "hunter",
+      "text": "Where are you hiding, guest?"
+    },
+    {
+      "id": "hunter_patrol_2",
+      "speaker": "hunter",
+      "text": "Come out, come out. I won't bite. Much."
+    },
+    {
+      "id": "hunter_patrol_3",
+      "speaker": "hunter",
+      "text": "This house has a lot of rooms. I know every one of them."
+    },
+    {
+      "id": "hunter_patrol_4",
+      "speaker": "hunter",
+      "text": "I can smell the rain on you."
+    },
+    {
+      "id": "hunter_laugh_1",
+      "speaker": "hunter",
+      "text": "Heh. Heh heh heh."
+    },
+    {
+      "id": "hunter_heard_1",
+      "speaker": "hunter",
+      "text": "What was that?"
+    },
+    {
+      "id": "hunter_heard_2",
+      "speaker": "hunter",
+      "text": "I heard you."
+    },
+    {
+      "id": "hunter_heard_3",
+      "speaker": "hunter",
+      "text": "Somebody's walking on my floors."
+    },
+    {
+      "id": "hunter_spotted_1",
+      "speaker": "hunter",
+      "text": "There you are!"
+    },
+    {
+      "id": "hunter_spotted_2",
+      "speaker": "hunter",
+      "text": "Found you, guest!"
+    },
+    {
+      "id": "hunter_lost_1",
+      "speaker": "hunter",
+      "text": "Hiding again? You can't hide forever."
+    },
+    {
+      "id": "hunter_lost_2",
+      "speaker": "hunter",
+      "text": "Fine. I'll find you later."
+    },
+    {
+      "id": "hunter_caught_1",
+      "speaker": "hunter",
+      "text": "Got you. Welcome home."
+    },
+    {
+      "id": "host_welcome",
+      "speaker": "host",
+      "text": "Welcome to Hollow Manor, sweetheart. We've been expecting you."
+    },
+    {
+      "id": "host_heard_1",
+      "speaker": "host",
+      "text": "Did you hear that, darling? I think our guest is downstairs."
+    },
+    {
+      "id": "host_heard_2",
+      "speaker": "host",
+      "text": "Darling, go and look. Somebody is walking around down there."
+    },
+    {
+      "id": "host_taunt_1",
+      "speaker": "host",
+      "text": "Come out, sweetheart. Dinner's getting cold."
+    },
+    {
+      "id": "host_taunt_2",
+      "speaker": "host",
+      "text": "Your friend asked about you. Isn't that sweet?"
+    },
+    {
+      "id": "host_caught",
+      "speaker": "host",
+      "text": "Oh, don't cry. You're part of the family now."
+    },
+    {
+      "id": "host_escaped",
+      "speaker": "host",
+      "text": "Leaving so soon? You'll be back. They always come back."
+    },
+    {
+      "id": "friend_letter",
+      "speaker": "friend",
+      "text": "Hey. It's me. I know it's been a while. I'm at a big house called Hollow Manor, and I need you. Please come. Come alone.",
+      "effect": "none"
+    },
+    {
+      "id": "friend_tape_1",
+      "speaker": "friend",
+      "text": "If you found this tape, don't trust the letter. They made me write it. The front door key is always hidden somewhere downstairs, in a drawer or a cupboard. Search quietly. He hears everything. And stay off the hallway floorboards if he's close."
+    }
+  ]
+}
